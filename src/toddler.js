@@ -103,9 +103,9 @@ module.exports = function(page, system) {
         console.log("[T]"+"READY 1!");
         phantom.waitFor(searchResultsLoad);
         console.log("[T]"+"READY 2!");
-        console.log("[T]"+"------------BEGIN " + pageNum + "-------------");
+        console.log("[T]["+url+"]------------BEGIN " + pageNum + "-------------");
         var titles = page.evaluate(extractDetails);
-        console.log("[T] [RESULT]   "+JSON.stringify(titles));
+        console.log("[T] [RESULT] ["+url+ "]  "+JSON.stringify(titles));
         console.log("[T]"+"------------END-------------");
         _crawl(options, pageNum + 1, 0, 0);
       }
@@ -113,9 +113,19 @@ module.exports = function(page, system) {
     };
 
     return {
-      crawl: function () {
-        var options = getOptions();
-        _crawl(options, options.pageNum, 0, 0);
+      crawl: function (urls) {
+        urls = urls || [];
+        if(!urls.length){
+          var options = getOptions(!urls.length);
+          _crawl(options, options.pageNum, 0, 0);
+        }
+        else{
+          var options = DEFAULT_OPTIONS;
+          for(url in urls){
+            options.url = url;
+            _crawl(options, options.pageNum, 0, 0);
+          }
+        }
       }
     };
   };
