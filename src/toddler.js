@@ -81,7 +81,7 @@ module.exports = function(page, system) {
     prepareBrowser();
     page.open(currentPage, function(status) {
       if (status !== "success") {
-        sleep(2E3, "[retry] " + fails + " | " + currentPage + " Unable to access network " + status);
+        sleep(2E3, "[retry] " + fails + " | " + currentPage + " status " + status);
         _crawl(options, pageNum, 0, fails + 1);
       } else {
         var url = page.evaluate(function() {
@@ -121,8 +121,8 @@ module.exports = function(page, system) {
         }
         else{
           var options = DEFAULT_OPTIONS;
-          for(url in urls){
-            options.url = url;
+          for(var i=0;i< 1; i++){
+            options.url = urls[i];
             _crawl(options, options.pageNum, 0, 0);
           }
         }
