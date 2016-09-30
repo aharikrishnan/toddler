@@ -62,12 +62,6 @@ module.exports = function(page, system) {
     return titles;
   };
   var _crawl = function(options, pageNum, attempts, fails) {
-    console.log("[T]  "+ pageNum + "  "+  JSON.stringify(options));
-    if (pageNum > maxPages) {
-      console.log('DONE');
-      phantom.exit();
-    }
-
     var url         = options.url;
     var maxFails    = options.maxFails;
     var maxPages    = options.maxPages;
@@ -75,7 +69,11 @@ module.exports = function(page, system) {
     attempts        = attempts || 0;
     fails           = fails || 0;
     var currentPage = url.replace("PAGE_NUM", pageNum);
-
+    if (pageNum > maxPages) {
+      console.log('DONE');
+      phantom.exit();
+    }
+    console.log("[T]  "+ pageNum + "  "+  JSON.stringify(options));
     if (fails > maxFails || attempts >= maxFails) {
       sleep(10E3, 'long sleep');
     }
