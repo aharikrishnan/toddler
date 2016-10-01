@@ -1,4 +1,4 @@
-module.exports = function(page, system) {
+module.exports = function(page, system, fs) {
   var args = system.args;
   var DEFAULT_OPTIONS = {
     url: undefined,
@@ -49,8 +49,9 @@ module.exports = function(page, system) {
       }
       window.document.body.scrollTop = scroll;
       var length = $("#cards-holder .card-title").length;
+      var totalItems = parseInt($('#subcat-title [ng-bind^="displayProductCount"]').text(), 10)
       console.log("[T]"+"length -> " + length + "  scroll top -> " + document.body.scrollTop + " scroll height -> " + document.body.scrollHeight);
-      return length > 45;
+      return length > Math.min(45, totalItems -2);
     });
   };
   var extractDetails = function() {
@@ -75,7 +76,13 @@ module.exports = function(page, system) {
     }
     console.log("[T]  "+ pageNum + "  "+  JSON.stringify(options));
     if (fails > maxFails || attempts >= maxFails) {
-      sleep(10E3, 'long sleep');
+      fs.writeFile("failed", JSON.stringify(options), function(err) { if(err) {
+		      return console.log(err);
+		      }
+		      console.log("The file was saved!");
+		      }); 
+      phantom.exit();
+
     }
 
     prepareBrowser();
@@ -97,7 +104,7 @@ module.exports = function(page, system) {
         console.log("[T]"+"waiting");
         phantom.waitFor(function() {
           return page.evaluate(function() {
-            return $("#cards-holder .card-title").is(":visible");
+            return $("#cards-holder .card-title").is(":visible") && $('#subcat-title [ng-bind^="displayProductCount"]').is(':visible');
           });
         });
         console.log("[T]"+"READY 1!");
@@ -121,7 +128,7 @@ module.exports = function(page, system) {
         }
         else{
           var options = DEFAULT_OPTIONS;
-          for(var i=0;i< 1; i++){
+          for(var i=0;i< urls.length; i++){
             options.url = urls[i];
             _crawl(options, options.pageNum, 0, 0);
           }
