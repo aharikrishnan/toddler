@@ -1,0 +1,21 @@
+#! /bin/bash
+
+PIDFILE="/home/hari/toddler/run.pid"
+OUTFILE="/home/hari/toddler/out/crawl.out"
+EXEPATH="/home/hari/toddler/run"
+
+echo $$ > /home/hari/toddler/chkrun.pid
+
+if [ -f "$PIDFILE" ]; then
+  PID=$(cat "$PIDFILE")
+NOW="$(date +%s)"
+  dm=`echo "( $NOW - $(stat -c%Y $OUTFILE) )" | bc`
+  echo "Elapse --> $dm"
+  if (( dm > 60 )); then
+  echo "restarting $PID"
+    kill -9 $PID
+	(bash "$EXEPATH") && echo "Done"
+    #( /usr/bin/screen -dS "ABCDEFGHIJ" -m "$EXEPATH" & )
+#	disown
+  fi
+fi
