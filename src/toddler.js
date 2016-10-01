@@ -3,7 +3,7 @@ module.exports = function(page, system, fs) {
   var DEFAULT_OPTIONS = {
     url: undefined,
     pageNum: 1,
-    maxFails: 5,
+    maxFails: 3,
     maxPages: 1
   };
   var getOptions = function() {
@@ -76,11 +76,7 @@ module.exports = function(page, system, fs) {
     }
     console.log("[T]  "+ pageNum + "  "+  JSON.stringify(options));
     if (fails > maxFails || attempts >= maxFails) {
-      fs.writeFile("failed", JSON.stringify(options), function(err) { if(err) {
-		      return console.log(err);
-		      }
-		      console.log("The file was saved!");
-		      }); 
+	    console.log("[T] [RESULT] ["+currentPage+ "]  [failed] "+ url);
       phantom.exit();
 
     }
@@ -99,6 +95,7 @@ module.exports = function(page, system, fs) {
         if (url !== currentPage) {
           console.log("[T]"+"Trying " + attempts + " ..");
           sleep(2E3, "[retry] " + fails + " | " + currentPage + " Unable to access network " + status);
+	    console.log("[T] [RESULT] ["+currentPage+ "]  [failed] "+ url);
           _crawl(options, pageNum, attempts + 1, 0);
         }
         console.log("[T]"+"waiting");
