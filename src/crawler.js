@@ -52,30 +52,40 @@ var extractDetails = function() {
 var table=[];
 var scrape = function(index, categories) {
   var category = categories[index];
-  if (category && category.h) {
-    this.echo("[TODO] " + category.h);
-    this.thenOpen(category.h, function() {
-      this.echo("[GET] " + this.getCurrentUrl());
-      this.waitFor(isVisible, function() {
-        this.echo("[VISIBLE] count");
-        this.waitFor(searchResultsLoad, function() {
-          this.echo("[VISIBLE] items");
-          var row = [];
-          var categoryTitle = category.n;
-          var products = page.evaluate(extractDetails);
-          for (var i = 0;i < products.length;i++) {
-            row.push(categoryTitle);
-            row.push(products[i]);
-          }
-          table.push(row);
-          casper.wait(100, function() {
-            scrape(index + 1, categories);
+  if(index >= categories.length){
+    casper.run(function () {
+      //if(table.length === categories.length){
+      console.log(JSON.stringify(table, null, '\t'));
+      fs.write('./out/table.json', JSON.stringify(table, null, '\t'), 'w');
+      casper.done();
+      //}
+    })
+  }
+  else{
+    if (category && category.h) {
+      this.thenOpen(category.h, function() {
+        this.echo("[GET] " + this.getCurrentUrl());
+        this.waitFor(isVisible, function() {
+          this.echo("[VISIBLE] count");
+          this.waitFor(searchResultsLoad, function() {
+            this.echo("[VISIBLE] items");
+            var row = [];
+            var categoryTitle = category.n;
+            var products = page.evaluate(extractDetails);
+            for (var i = 0;i < products.length;i++) {
+              row.push(categoryTitle);
+              row.push(products[i]);
+            }
+            table.push(row);
+            casper.wait(100, function() {
+              scrape(index + 1, categories);
+            });
           });
+        }, function() {
+          this.captureSelector("./out/" + category.n + ".png".replace(/[^\x00-\x7F]/g, "-"), "body");
         });
-      }, function() {
-        this.captureSelector("./out/" + category.n + ".png".replace(/[^\x00-\x7F]/g, "-"), "body");
       });
-    });
+    }
   }
 };
 
@@ -94,13 +104,6 @@ var init = function (forest) {
     })
     .then(function () {
       scrape(0, randomCategories);
-    })
-    .run(function () {
-      //if(table.length === categories.length){
-      console.log(JSON.stringify(table, null, '\t'));
-      fs.write('./out/table.json', JSON.stringify(table, null, '\t'), 'w');
-      casper.done();
-      //}
     })
 };
 var data = fs.read('./out/leaf.json');
