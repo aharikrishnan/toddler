@@ -1,7 +1,8 @@
 var casper = require("casper").create({viewportSize:{width:1366, height:950}});
 var fs = require("fs");
 casper.userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.97 Safari/537.11");
-casper.options.waitTimeout = 10000;
+casper.options.waitTimeout = 300000;
+casper.options.stepTimeout = 300000;
 casper.options.verbose = true;
 casper.options.logLevel ="debug";
 var getRandomInt = function(min, max) {
@@ -19,13 +20,12 @@ var getRandomCategory = function(subCategories, depth) {
     return getRandomCategory(subCategories, depth + 1);
   }
 };
-var isVisible = function() {
-  return casper.evaluate(function() {
-    return $("#cards-holder .card-title").is(":visible") && $('#subcat-title [ng-bind^="displayProductCount"]').is(":visible");
-  });
-};
 var searchResultsLoad = function() {
-  return casper.wait(100).thenEvaluate(function() {
+  return casper.wait(700).evaluate(function() {
+    var elements =  $("#cards-holder .card-title").length && $('#subcat-title [ng-bind^="displayProductCount"]').length;
+    if(!elements){
+      return false;
+    }
     var scrollStep = 200;
     var scroll = window.document.body.scrollTop + scrollStep;
     if (scroll >= document.body.scrollHeight) {
@@ -59,25 +59,25 @@ var scrape = function(index, categories) {
     if (category && category.h) {
       casper.thenOpen(category.h, function() {
         this.echo("[GET] " + this.getCurrentUrl());
-        this.waitFor(isVisible, function() {
-          this.echo("[VISIBLE] count");
-          this.waitFor(searchResultsLoad, function() {
-            this.echo("[VISIBLE] items");
-            var row = [];
-            var categoryTitle = category.n;
-            var products = page.evaluate(extractDetails);
-            for (var i = 0;i < products.length;i++) {
-              row.push(categoryTitle);
-              row.push(products[i]);
-            }
-            table.push(row);
-            casper.wait(1000, function() {
-              scrape(index + 1, categories);
-            });
-          });
+        this.waitFor(searchResultsLoad, function() {
+          var total = this.evaluate(function(){
+            return $("#cards-holder .card-title").length;
+          })
+          var row = [];
+          var categoryTitle = category.n;
+          var products = this.evaluate(extractDetails);
+          for (var i = 0;i < products.length;i++) {
+            row.push(categoryTitle);
+            row.push(products[i]);
+          }
+          table.push(row);
+          console.log(row.length)
+          casper.wait(100).then(function() {
+            scrape(index + 1, categories);
+          })
         }, function() {
           this.captureSelector("./out/" + category.n + ".png".replace(/[^\x00-\x7F]/g, "-"), "body");
-        }, 8000);
+        }, 300000);
       });
     } else {
       scrape(index + 1, categories);
