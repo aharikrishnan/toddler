@@ -52,32 +52,38 @@ var scrape = function(index, categories) {
   console.log("scrape "+ category.h)
   if (index >= categories.length) {
   console.log("DONE");
-  console.log(JSON.stringify(table, null, "\t"));
-  fs.write("./out/table.json", JSON.stringify(table, null, "\t"), "w");
+  //console.log(JSON.stringify(table, null, "\t"));
+  //fs.write("./out/table.json", JSON.stringify(table, null, "\t"), "w");
   casper.done();
   } else {
     if (category && category.h) {
       casper.thenOpen(category.h, function() {
         this.echo("[GET] " + this.getCurrentUrl());
+        if(category.h === this.getCurrentUrl()){
         this.waitFor(searchResultsLoad, function() {
           var total = this.evaluate(function(){
             return $("#cards-holder .card-title").length;
           })
-          var row = [];
+          var grid=[], row = [];
           var categoryTitle = category.n;
           var products = this.evaluate(extractDetails);
           for (var i = 0;i < products.length;i++) {
             row.push(categoryTitle);
             row.push(products[i]);
+            grid.push(row);
           }
-          table.push(row);
-          console.log(row.length)
-          casper.wait(100).then(function() {
+          fs.write("./out/table.json", JSON.stringify(grid, null, "\t"), "a");
+          table.concat(grid);
+          casper.wait(600).then(function() {
             scrape(index + 1, categories);
           })
         }, function() {
-          this.captureSelector("./out/" + category.n + ".png".replace(/[^\x00-\x7F]/g, "-"), "body");
+          this.captureSelector("./out/" + category.n + ".timeout.png".replace(/[^\x00-\x7F]/g, "-"), "body");
         }, 300000);
+        }
+        else{
+          this.captureSelector("./out/" + category.n + ".fail.png".replace(/[^\x00-\x7F]/g, "-"), "body");
+        }
       });
     } else {
       scrape(index + 1, categories);
