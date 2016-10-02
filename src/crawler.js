@@ -86,6 +86,9 @@ var scrape = function(index, categories) {
         });
       });
     }
+    else{
+      scrape(index + 1, categories);
+    }
   }
 };
 
