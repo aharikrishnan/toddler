@@ -22,15 +22,30 @@ module.exports = function(page, system, fs) {
     page.viewportSize = {width:1200, height:800};
     page.settings.userAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.82 Safari/537.36";
     page.onConsoleMessage = function(msg) {
-      if(/\[T\]/.test(msg)){
+      //if(/\[T\]/.test(msg)){
         system.stderr.writeLine("[[console]]  " + msg);
-      }
+      //}
+    };
+    page.onError = function(message, url, lineNumber) {  
+      system.stderr.writeLine("!!!!!!!!!! [[ERROR]]  " + msg);
+      return true;
     };
     phantom.waitFor = function(callback) {
       do {
         this.page.sendEvent("mousemove");
       } while (!callback());
     };
+    phantom.onError = function(msg, trace) {
+      var msgStack = ['PHANTOM ERROR: ' + msg];
+      if (trace && trace.length) {
+        msgStack.push('TRACE:');
+        trace.forEach(function(t) {
+          msgStack.push(' -> ' + (t.file || t.sourceURL) + ': ' + t.line + (t.function ? ' (in function ' + t.function +')' : ''));
+            });
+          }
+          console.error(msgStack.join('\n'));
+          phantom.exit(1);
+          };
     prepareBrowser = function() {
     };
   };
@@ -76,7 +91,7 @@ module.exports = function(page, system, fs) {
     }
     console.log("[T]  "+ pageNum + "  "+  JSON.stringify(options));
     if (fails > maxFails || attempts >= maxFails) {
-	    console.log("[T] [RESULT] ["+currentPage+ "]  [failed] "+ url);
+      console.log("[T] [RESULT] ["+currentPage+ "]  [failed] "+ url);
       phantom.exit();
 
     }
@@ -87,6 +102,24 @@ module.exports = function(page, system, fs) {
         sleep(2E3, "[retry] " + fails + " | " + currentPage + " status " + status);
         _crawl(options, pageNum, 0, fails + 1);
       } else {
+        page.evaluate(function() {
+          window.onerror = function(){
+            console.log("Error");
+            return true;
+          };
+          window.navigator.geolocation = {
+            getCurrentPosition: function (success, failure) {
+              success({
+                coords: {
+                  // Will always return Germany, Rostock
+                  latitude: 54.0834,
+              longitude: 12.1004
+
+                }, timestamp: Date.now()
+              });
+            }
+          };
+        });
         var url = page.evaluate(function() {
           return window.location.href;
         });
@@ -95,7 +128,7 @@ module.exports = function(page, system, fs) {
         if (url !== currentPage) {
           console.log("[T]"+"Trying " + attempts + " ..");
           sleep(2E3, "[retry] " + fails + " | " + currentPage + " Unable to access network " + status);
-	    console.log("[T] [RESULT] ["+currentPage+ "]  [failed] "+ url);
+          console.log("[T] [RESULT] ["+currentPage+ "]  [failed] "+ url);
           _crawl(options, pageNum, attempts + 1, 0);
         }
         console.log("[T]"+"waiting");
@@ -116,7 +149,90 @@ module.exports = function(page, system, fs) {
       });
     };
 
+    var n2as = function(nodes){
+      return nodes.map(function (i, node) {
+        return n2a($(node));
+      }).get();
+    };
+    /**
+     * {
+     *  n: <name>,
+     *  h: <href>,
+     *  c: [<childrens}],
+     *  _: <view more>
+     * }
+     */
+
+    var walkTree = function(node, callback){
+      console.log('[WALK]  '+ JSON.stringify(node));
+      if(!node || node === {}){
+        return;
+      }
+      callback(node);
+      for(var i=0;i<node.c.length;i++){
+        walkTree(node.c[i], callback)
+      }
+    };
+    var _getTree = function(domain, siteMap, depth, waitCallback, evalCallback, filterCallback){
+      if(depth < 0){
+        return {};
+      }
+      console.log("[GET] "+ siteMap);
+      page.open(siteMap, function(status) {
+        if (status !== "success") {
+          console.log("[FAIL| " + siteMap + "] "+ status);
+          return {};
+        } else {
+          console.log('[FETCH]')
+          var pageURL = page.evaluate(function() {
+            return window.location.href;
+          });
+          if (pageURL !== siteMap) {
+            console.log("[FAIL |"+ siteMap +"]  [GOT | " + pageURL +"] trying again..");
+            return _getTree(domain, siteMap, depth, waitCallback, evalCallback, filterCallback);
+          }
+          // wait for the elements to load
+          console.log('[WAIT]')
+          phantom.waitFor(function(){return page.evaluate(waitCallback);});
+          console.log('[EVAL]')
+          var tree = page.evaluate(evalCallback);
+          console.log(tree.length);
+          walkTree({n:"pseudo-root", h:"#", c:tree}, function(node){
+            var url = node._;
+            if(filterCallback(node)){
+              if(!/^http/.test(url)){
+                url = 'http://' + domain +'/'+ url
+              }
+              var subTree  = _getTree(domain, url, depth-1, waitCallback, evalCallback, filterCallback);
+              node.c = subTree.c
+            }
+          });
+
+          console.log("--------------------------------------------------------------------------------");
+          console.log(JSON.stringify(tree));
+          console.log("[DONE]");
+          return tree;
+        }
+      });
+    };
+
     return {
+      getTree: function(options){
+        prepareBrowser();
+        options = options || {};
+        options.depth = options.depth || 1;
+        console.log('[START] '+ JSON.stringify(options))
+        var tree = _getTree(
+            options.domain,
+            options.url,
+            options.depth,
+            options.waitCallback,
+            options.evalCallback,
+            options.filterCallback
+            );
+        options.successCallback(tree);
+        phantom.exit(0);
+      },
       crawl: function (urls) {
         urls = urls || [];
         if(!urls.length){
@@ -125,6 +241,7 @@ module.exports = function(page, system, fs) {
         }
         else{
           var options = DEFAULT_OPTIONS;
+
           for(var i=0;i< urls.length; i++){
             options.url = urls[i];
             _crawl(options, options.pageNum, 0, 0);
