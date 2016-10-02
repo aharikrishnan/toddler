@@ -3,8 +3,8 @@ var casper = require("casper").create({
 });
 var fs = require("fs");
 
-casper.options.waitTimeout = 4000;
-
+casper.options.waitTimeout = 2000;
+casper.userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.97 Safari/537.11");
 var getRandomInt = function(min, max) {
   return Math.floor(Math.random() * (max - min + 1) + min);
 };
