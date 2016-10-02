@@ -21,11 +21,11 @@ var getRandomCategory = function(subCategories, depth) {
 };
 var isVisible = function() {
   return casper.evaluate(function() {
-    $("#cards-holder .card-title").is(":visible") && $('#subcat-title [ng-bind^="displayProductCount"]').is(":visible");
+    return $("#cards-holder .card-title").is(":visible") && $('#subcat-title [ng-bind^="displayProductCount"]').is(":visible");
   });
 };
 var searchResultsLoad = function() {
-  return casper.wait(200).thenEvaluate(function() {
+  return casper.wait(100).thenEvaluate(function() {
     var scrollStep = 200;
     var scroll = window.document.body.scrollTop + scrollStep;
     if (scroll >= document.body.scrollHeight) {
