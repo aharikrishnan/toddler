@@ -1,8 +1,10 @@
 var system = require("system");
 var page = require("webpage").create();
 var fs = require("fs");
-var toddler = require("./toddler")(page, system, fs);
 var out = require("./out")(fs);
+
+var toddler = require("./toddler")(page, system, fs, out);
+
 var evalCallback = function() {
   var n2a = function(node) {
     if (node.length) {
@@ -27,11 +29,14 @@ var evalCallback = function() {
   return tree;
 };
 var waitCallback = function() {
-  console.log("[VISIBLE]");
-  return $("section, #sitemap .has-columns ul.list-links > li").is(":visible");
+  var isVisible = $("section, #sitemap .has-columns ul.list-links > li").is(":visible")
+  console.log("[VISIBLE] "+ isVisible);
+  return isVisible;
 };
 var filterCallback = function(node) {
-  return/sitemap/.test(node._);
+  var shouldCrawl = /sitemap/.test(node._)
+  console.log("[FILTER | "+ shouldCrawl+"] "+ JSON.stringify(node));
+  return shouldCrawl;
 };
 var tree = toddler.getTree({
   domain: "www.sears.com",
