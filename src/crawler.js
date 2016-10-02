@@ -1,10 +1,9 @@
-var casper = require("casper").create({
-  viewportSize: {width: 1366, height: 950}
-});
+var casper = require("casper").create({viewportSize:{width:1366, height:950}});
 var fs = require("fs");
-
-casper.options.waitTimeout = 2000;
 casper.userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.97 Safari/537.11");
+casper.options.waitTimeout = 10000;
+casper.options.verbose = true;
+casper.options.logLevel ="debug";
 var getRandomInt = function(min, max) {
   return Math.floor(Math.random() * (max - min + 1) + min);
 };
@@ -20,14 +19,13 @@ var getRandomCategory = function(subCategories, depth) {
     return getRandomCategory(subCategories, depth + 1);
   }
 };
-
-var isVisible = function(){
-  return this.evaluate(function(){
-    $("#cards-holder .card-title").is(":visible") && $('#subcat-title [ng-bind^="displayProductCount"]').is(":visible")
+var isVisible = function() {
+  return casper.evaluate(function() {
+    $("#cards-holder .card-title").is(":visible") && $('#subcat-title [ng-bind^="displayProductCount"]').is(":visible");
   });
-}
+};
 var searchResultsLoad = function() {
-  return this.evaluate(function(){
+  return casper.wait(200).thenEvaluate(function() {
     var scrollStep = 200;
     var scroll = window.document.body.scrollTop + scrollStep;
     if (scroll >= document.body.scrollHeight) {
@@ -48,22 +46,18 @@ var extractDetails = function() {
   });
   return titles;
 };
-
-var table=[];
+var table = [];
 var scrape = function(index, categories) {
   var category = categories[index];
-  if(index >= categories.length){
-    casper.run(function () {
-      //if(table.length === categories.length){
-      console.log(JSON.stringify(table, null, '\t'));
-      fs.write('./out/table.json', JSON.stringify(table, null, '\t'), 'w');
-      casper.done();
-      //}
-    })
-  }
-  else{
+  console.log("scrape "+ category.h)
+  if (index >= categories.length) {
+  console.log("DONE");
+  console.log(JSON.stringify(table, null, "\t"));
+  fs.write("./out/table.json", JSON.stringify(table, null, "\t"), "w");
+  casper.done();
+  } else {
     if (category && category.h) {
-      this.thenOpen(category.h, function() {
+      casper.thenOpen(category.h, function() {
         this.echo("[GET] " + this.getCurrentUrl());
         this.waitFor(isVisible, function() {
           this.echo("[VISIBLE] count");
@@ -77,49 +71,37 @@ var scrape = function(index, categories) {
               row.push(products[i]);
             }
             table.push(row);
-            casper.wait(100, function() {
+            casper.wait(1000, function() {
               scrape(index + 1, categories);
             });
           });
         }, function() {
           this.captureSelector("./out/" + category.n + ".png".replace(/[^\x00-\x7F]/g, "-"), "body");
-        });
+        }, 8000);
       });
-    }
-    else{
+    } else {
       scrape(index + 1, categories);
     }
   }
 };
-
-
-var init = function (forest) {
+var init = function(forest) {
   var randomCategories = [];
-  for (var i = 0; i < forest.length; i++) {
+  for (var i = 0;i < forest.length;i++) {
     var tree = forest[i];
     var leaf = getRandomCategory(tree.l);
     randomCategories.push(leaf);
   }
   console.log(JSON.stringify(randomCategories));
-  casper
-    .start("http://sears.com", function () {
-      this.echo('[START]' + this.getCurrentUrl());
-    })
-    .then(function () {
-      scrape(0, randomCategories);
-    })
+  console.log(randomCategories.length);
+  scrape(0, randomCategories);
 };
-var data = fs.read('./out/leaf.json');
+
+casper.start("http://www.sears.com/", function() {
+  this.echo("[START]" + this.getCurrentUrl());
+})
+casper.then(function() {
+var data = fs.read("./out/leaf.json");
 forest = JSON.parse(data);
 init(forest);
-
-/*
-   fs.readFile("./out/leaf.json", "utf8", function(err, data) {
-   var forest = [];
-   if (err) {
-   return console.log(err);
-   }
-   forest = JSON.parse(data);
-   init(forest);
-   });
-   */
+});
+casper.run()
