@@ -67,6 +67,10 @@ var scrape = function(index, categories) {
   casper.done();
   } else {
     if (category && category.h) {
+      writeState({
+        current: category
+      });
+
       casper.thenOpen(category.h, function() {
         this.echo("[GET] " + this.getCurrentUrl());
         if(category.h === this.getCurrentUrl()){
@@ -103,21 +107,46 @@ var scrape = function(index, categories) {
     }
   }
 };
+var writeState = function(state){
+  fs.write("./out/.crawler.state", JSON.stringify(state, null, "\t"), "w");
+}
+var readState = function(){
+  try{
+  var data = fs.read("./out/.crawler.state"), state={};
+  state = JSON.parse(data);
+  }
+  catch(e){
+    state = {};
+  }
+  return state;
+};
+
 var init = function(forest) {
   var randomCategories = [], perCategory = 3;
-  fs.write("./out/categories.json", "------------Init-------------\n", "a");
   for (var i = 0;i < forest.length;i++) {
     var tree = forest[i];
     categories  = tree.l || [];
     selectedCategories = getAllCategories(categories, perCategory);
     randomCategories = randomCategories.concat(selectedCategories);
-    fs.write("./out/categories.json", JSON.stringify(tree.n, null, "\t") + "\n", "a");
-    fs.write("./out/categories.json", JSON.stringify(selectedCategories, null, "\t") + "\n", "a");
-    fs.write("./out/categories.json", "------------------------\n", "a");
+    fs.write("./out/categories.json", JSON.stringify({n: tree.n, l: randomCategories}, null, "\t"), "a");
   }
-  console.log(JSON.stringify(randomCategories));
   console.log(randomCategories.length);
-  scrape(0, randomCategories);
+  var state = readState();
+  var resumeIndex = 0;
+  if (state && state.current && state.current.h) {
+    // Slide unitl you find the current state
+    for(var i=0;i<randomCategories.length; i++){
+      if(state.current.h === randomCategories[i].h){
+        console.log('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+        resumeIndex = i;
+        break;
+      }
+    }
+  }
+  else{
+    console.log(JSON.stringify(state))
+  }
+  scrape(resumeIndex, randomCategories);
 };
 
 casper.start("http://www.sears.com/", function() {
