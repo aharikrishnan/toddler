@@ -5,6 +5,16 @@ casper.options.waitTimeout = 360000;
 casper.options.stepTimeout = 360000;
 casper.options.verbose = true;
 casper.options.logLevel ="debug";
+var getAllCategories = function(subCategories, length) {
+  var categories = [], n = subCategories.length;
+  for(var i=0;i<n; i++){
+    var node =subCategories[i];
+    if (node && /^http/.test(node.h)) {
+      categories.push(node);
+    }
+  }
+  return categories;
+};
 var getCategories = function(subCategories, length) {
   var categories = [], n = subCategories.length, j=0;
   for(var i=0;i<Math.min(n, length); ){
@@ -75,7 +85,7 @@ var scrape = function(index, categories) {
             }
             fs.write("./out/table.json", JSON.stringify(grid, null, "\t"), "a");
             table.concat(grid);
-            casper.wait(300).then(function() {
+            casper.wait(500).then(function() {
               scrape(index + 1, categories);
             })
           }, function() {
@@ -99,7 +109,7 @@ var init = function(forest) {
   for (var i = 0;i < forest.length;i++) {
     var tree = forest[i];
     categories  = tree.l || [];
-    selectedCategories = getCategories(categories, perCategory);
+    selectedCategories = getAllCategories(categories, perCategory);
     randomCategories = randomCategories.concat(selectedCategories);
     fs.write("./out/categories.json", JSON.stringify(tree.n, null, "\t") + "\n", "a");
     fs.write("./out/categories.json", JSON.stringify(selectedCategories, null, "\t") + "\n", "a");
