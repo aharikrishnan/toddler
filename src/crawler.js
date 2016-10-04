@@ -1,8 +1,8 @@
 var casper = require("casper").create({viewportSize:{width:1366, height:950}});
 var fs = require("fs");
 casper.userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.97 Safari/537.11");
-casper.options.waitTimeout = 360000;
-casper.options.stepTimeout = 360000;
+casper.options.waitTimeout = 60000;
+casper.options.stepTimeout = 60000;
 casper.options.verbose = true;
 casper.options.logLevel ="debug";
 var getAllCategories = function(subCategories, length) {
@@ -36,7 +36,7 @@ var searchResultsLoad = function() {
     if(!elements){
       return false;
     }
-    var scrollStep = 200;
+    var scrollStep = 300;
     var scroll = window.document.body.scrollTop + scrollStep;
     if (scroll >= document.body.scrollHeight) {
       scroll = scroll - 2 * scrollStep;
@@ -95,7 +95,7 @@ var scrape = function(index, categories) {
           }, function() {
             this.captureSelector("./out/" + category.n + ".timeout.png".replace(/[^\x00-\x7F]/g, "-"), "body");
             scrape(index + 1, categories);
-          }, 360000);
+          }, 60000);
         }
         else{
           this.captureSelector("./out/" + category.n + ".fail.png".replace(/[^\x00-\x7F]/g, "-"), "body");
